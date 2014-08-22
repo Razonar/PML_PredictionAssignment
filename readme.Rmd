@@ -1,0 +1,115 @@
+# Practical Machine Learning Assignment
+*by Alvaro, August 2014*
+
+## Synopsis
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions:
+
+Class A: Exactly according to the specification
+Class B: Throwing the elbows to the front
+Class C: Lifting the dumbbell only halfway
+Class D: Lowering the dumbbell only halfway
+Class E: Throwing the hips to the front
+
+## Data Processing
+
+Download and load the testing and training data
+
+```{r}
+train <- read.csv("pml-training.csv")
+test  <- read.csv("pml-testing.csv")
+```
+
+Separate the training data into two parts, one to build the model and the other to validate it, 
+
+```{r}
+library(caret)
+trainNdx <- createDataPartition(train$classe, p=0.8, list=FALSE)
+Train <- train[ trainNdx, ]
+Valid <- train[-trainNdx, ]
+```
+
+Clean the data excluding near zero variance features
+
+```{r}
+nzv <- nearZeroVar(Train)
+Train <- Train[, -nzv]
+```
+
+Also exclude columns with missing values
+
+```{r}
+NL <- sapply(Train, function(x) {
+    sum(!(is.na(x) | x == ""))})
+NC <- names(NL[NL < 0.6 * length(Train$classe)])
+ND <- c("X", "user_name", "raw_timestamp_part_1", 
+        "raw_timestamp_part_2", "cvtd_timestamp", 
+        "new_window", "num_window")
+Train <- Train[, !names(Train) %in% c(ND, NC)]
+```
+
+## Modelling
+
+Use Random Forest to build a model 
+
+```{r}
+library(randomForest);
+rfModel <- randomForest(classe ~ ., Train, importance=TRUE, ntrees=10)
+```
+
+# Testing
+
+Using the predict function can elaborate a cross-tabulation of observed and predicted classes with associated statistics
+
+```{r}
+pTrain <- predict(rfModel, Train)
+print(confusionMatrix(pTrain, Train$classe))
+```
+
+According with the documentation of the package, the model aprove the test.  (See "Building predictive models in R using the caret package"", Journal of Statistical Software, http://www.jstatsoft.org/v28/i05/)
+
+## Validating
+
+Now test the model against the validation set
+
+```{r}
+pValid <- predict(rfModel, Valid)
+print(confusionMatrix(pValid, Valid$classe))
+
+```
+
+## Conclusions
+
+Based on preious results now we can use the Random Forest model to predict the results over the original test set.
+
+```{r}
+pTest <- predict(rfModel, test)
+pTest
+
+```
+
+## Appendix
+
+Files for the submission part.
+
+```{r}
+pml_write_files = function(x) {
+    for (i in 1:length(x)) {
+        FN = paste0("problem_id_", i, ".txt")
+        write.table(x[i], file=FN, quote=FALSE, 
+                    row.names=FALSE, col.names=FALSE)
+    }
+}
+```
+
+Write the files
+
+```{r}
+pml_write_files(as.vector(pTest))
+```
+
+
