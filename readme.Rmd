@@ -1,5 +1,5 @@
 # Practical Machine Learning Assignment
-*by Alvaro, August 2014*
+*by Alvaro Diaz Falconi, August 2020*
 
 ## Synopsis
 
